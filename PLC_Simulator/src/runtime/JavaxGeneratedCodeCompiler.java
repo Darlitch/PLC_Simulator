@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 public class JavaxGeneratedCodeCompiler implements IGeneratedCodeCompiler {
 
@@ -22,7 +23,7 @@ public class JavaxGeneratedCodeCompiler implements IGeneratedCodeCompiler {
             throw new IllegalArgumentException("Sources directory does not exist: " + sourcesDir);
         }
 
-        Files.createDirectories(classesDir);
+        recreateDirectory(classesDir);
 
         List<Path> javaFiles;
         try (var stream = Files.walk(sourcesDir)) {
@@ -57,6 +58,31 @@ public class JavaxGeneratedCodeCompiler implements IGeneratedCodeCompiler {
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to compile generated sources", e);
+        }
+    }
+
+    private void recreateDirectory(Path dir) throws IOException {
+        if (Files.exists(dir)) {
+            deleteRecursively(dir);
+        }
+        Files.createDirectories(dir);
+    }
+
+    private void deleteRecursively(Path dir) throws IOException {
+        try (var stream = Files.walk(dir)) {
+            stream.sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            throw new RuntimeException("Failed to delete: " + path, e);
+                        }
+                    });
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof IOException ioException) {
+                throw ioException;
+            }
+            throw e;
         }
     }
 }
