@@ -1,0 +1,119 @@
+CONFIGURATION Traffic_lights
+	VAR_GLOBAL
+		red1 : BOOL;
+		yellow1 : BOOL;
+		green1 : BOOL;
+		red2 : BOOL;
+		yellow2 : BOOL;
+		green2 : BOOL;
+		sensor : BOOL;
+	END_VAR
+
+	VAR_GLOBAL CONSTANT
+		NUMBER_OF_LIGHTS: INT := 3;
+	END_VAR
+
+	VAR_GLOBAL
+		lightsArray1 : ARRAY [1 .. NUMBER_OF_LIGHTS] OF BOOL := [red1, yellow1, green1];
+		lightsArray2 : ARRAY [1 .. NUMBER_OF_LIGHTS] OF BOOL := [green2, yellow2, red2];
+	END_VAR
+
+	RESOURCE r1 ON Test
+		TASK T1 (INTERVAL := T#1s, PRIORITY := 1);
+		PROGRAM traffic_lights_controller WITH T1: Controller(
+			PROCESS ACTIVE red_light1: Light(b_light => red1),
+			PROCESS yellow_light1: Light(b_light => yellow1),
+			PROCESS green_light1: Light(b_light => green1),
+			PROCESS red_light2 : Light(b_light => red2),
+			PROCESS yellow_light2 : Light(b_light => yellow2),
+			PROCESS ACTIVE green_light2 : Light(b_light => green2),
+			PROCESS ACTIVE control1: Control(control_sensor := sensor, pRed := red_light1, pYellow := yellow_light1, pGreen := green_light1, rLightsArray := lightsArray1),
+			PROCESS ACTIVE control2: Control(control_sensor := sensor, pRed := green_light2, pYellow := yellow_light2, pGreen := red_light2, rLightsArray := lightsArray2)
+		);
+	END_RESOURCE
+END_CONFIGURATION
+
+PROGRAM Controller
+	PROCESS Light
+		VAR_OUTPUT
+			b_light : BOOL;
+		END_VAR
+
+		STATE Light
+			b_light := TRUE;
+		END_STATE
+	END_PROCESS
+
+	PROCESS Control
+		VAR_INPUT
+			control_sensor : BOOL;
+			rLightsArray : ARRAY [*] OF BOOL;
+		END_VAR
+
+		VAR_PROCESS
+			pRed : Light;
+			pYellow : Light;
+			pGreen : Light;
+		END_VAR
+
+		VAR
+			prev_light : INT;
+			alight : INT;
+			pressed : BOOL;
+		END_VAR
+
+		STATE Work
+		    IF pressed THEN
+				prev_light := 0;
+				pressed := FALSE;
+			ELSIF ((PROCESS pRed IN STATE INACTIVE) AND (PROCESS pGreen IN STATE ACTIVE)) OR ((PROCESS pGreen IN STATE INACTIVE) AND (PROCESS pRed IN STATE ACTIVE)) THEN
+				FOR alight := 1 TO NUMBER_OF_LIGHTS DO
+					IF rLightsArray[alight] THEN
+						prev_light := alight;
+					END_IF
+					rLightsArray[alight] := FALSE;
+				END_FOR
+				STOP PROCESS pRed;
+				START PROCESS pYellow;
+				STOP PROCESS pGreen;
+				SET STATE delay10;
+			ELSIF prev_light = 0 THEN
+				FOR alight := 1 TO NUMBER_OF_LIGHTS DO
+					rLightsArray[alight] := FALSE;
+				END_FOR
+				STOP PROCESS pRed;
+				STOP PROCESS pYellow;
+				START PROCESS pGreen;
+				SET STATE delay30;
+			ELSIF prev_light = 2 THEN
+				FOR alight := 1 TO NUMBER_OF_LIGHTS DO
+					rLightsArray[alight] := FALSE;
+				END_FOR
+				START PROCESS pRed;
+				STOP PROCESS pYellow;
+				STOP PROCESS pGreen;
+				SET STATE delay30;
+			END_IF
+		END_STATE
+
+		STATE delay10
+			TIMEOUT T#10s THEN
+				SET STATE Work;
+		    		IF control_sensor THEN
+			    		pressed := TRUE;
+				END_IF
+			END_TIMEOUT
+		END_STATE
+
+		STATE delay30
+			IF control_sensor AND PROCESS pRed IN STATE ACTIVE THEN
+			    pressed := TRUE;
+				SET STATE Work;
+			END_IF
+			TIMEOUT T#30s THEN
+				pressed := FALSE;
+				SET STATE Work;
+			END_TIMEOUT
+		END_STATE
+	END_PROCESS
+END_PROGRAM

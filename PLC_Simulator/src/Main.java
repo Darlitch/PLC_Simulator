@@ -1,3 +1,5 @@
+import generator.IPostGeneratorRunner;
+import generator.JarPostGeneratorRunner;
 import runtime.*;
 
 import java.nio.file.Path;
@@ -5,18 +7,22 @@ import java.util.Map;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        Path sourcesDir = Path.of("generated-src");
-        Path classesDir = Path.of("generated-classes");
+        Path generatorJar = Path.of("generator", "poST2JavaGen.jar");
+        Path postFile = Path.of("models", "Post.post");
+        Path generatedSourcesDir = Path.of("generated-src");
+        Path generatedClassesDir = Path.of("generated-classes");
+
+        IPostGeneratorRunner generatorRunner = new JarPostGeneratorRunner(generatorJar);
 
         SimulationManager manager = new SimulationManager(
                 new JavaxGeneratedCodeCompiler(),
                 new ReflectionSimulationLoader()
         );
 
-        manager.loadFromCompiledSources(sourcesDir, classesDir);
+        generatorRunner.generate(postFile, generatedSourcesDir);
+        manager.loadFromCompiledSources(generatedSourcesDir, generatedClassesDir);
 
-        System.out.println("Loaded simulation");
-
+        System.out.println("Loaded simulation from: " + postFile);
         System.out.println("Initial inputs: " + manager.dumpInputs());
         System.out.println("Initial outputs: " + manager.dumpOutputs());
         System.out.println("Initial states: " + manager.dumpProcessStates());
