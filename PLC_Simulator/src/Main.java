@@ -1,6 +1,9 @@
 import generator.IPostGeneratorRunner;
 import generator.JarPostGeneratorRunner;
-import runtime.*;
+import runtime.JavaxGeneratedCodeCompiler;
+import runtime.ReflectionSimulationLoader;
+import runtime.SimulationManager;
+import simulator.PlcSimulationEngine;
 
 import java.nio.file.Path;
 import java.util.Map;
@@ -14,40 +17,65 @@ public class Main {
 
         IPostGeneratorRunner generatorRunner = new JarPostGeneratorRunner(generatorJar);
 
-        SimulationManager manager = new SimulationManager(
+        SimulationManager simulationManager = new SimulationManager(
                 new JavaxGeneratedCodeCompiler(),
                 new ReflectionSimulationLoader()
         );
 
-        generatorRunner.generate(postFile, generatedSourcesDir);
-        manager.loadFromCompiledSources(generatedSourcesDir, generatedClassesDir);
+        PlcSimulationEngine engine = new PlcSimulationEngine(
+                generatorRunner,
+                simulationManager,
+                generatedSourcesDir,
+                generatedClassesDir
+        );
+
+        engine.loadModel(postFile);
 
         System.out.println("Loaded simulation from: " + postFile);
-        System.out.println("Initial inputs: " + manager.dumpInputs());
-        System.out.println("Initial outputs: " + manager.dumpOutputs());
-        System.out.println("Initial states: " + manager.dumpProcessStates());
+        System.out.println("Initial status: " + engine.getStatus());
+        System.out.println("Initial states: " + engine.dumpProcessStates());
+        System.out.println("Initial timers: " + engine.dumpProcessTimers());
 
-        manager.step();
+        engine.start();
+        System.out.println("Started. Status: " + engine.getStatus());
 
-        System.out.println("After step inputs: " + manager.dumpInputs());
-        System.out.println("After step outputs: " + manager.dumpOutputs());
-        System.out.println("After step globals: " + manager.dumpGlobals());
-        System.out.println("After step vars: " + manager.dumpVars());
-        System.out.println("After step states: " + manager.dumpProcessStates());
-        System.out.println("After step timers: " + manager.dumpProcessTimers());
+        Thread.sleep(3000);
 
-        manager.updateInputs(Map.of(
+        System.out.println("After ~3 seconds running:");
+        System.out.println("States: " + engine.dumpProcessStates());
+        System.out.println("Timers: " + engine.dumpProcessTimers());
+        System.out.println("Outputs: " + engine.dumpOutputs());
+
+        engine.pause();
+        System.out.println("Paused. Status: " + engine.getStatus());
+
+        Map<String, Long> timersBeforePauseWait = engine.dumpProcessTimers();
+        Thread.sleep(2000);
+        Map<String, Long> timersAfterPauseWait = engine.dumpProcessTimers();
+
+        System.out.println("After ~2 seconds paused:");
+        System.out.println("Timers before pause wait: " + timersBeforePauseWait);
+        System.out.println("Timers after pause wait: " + timersAfterPauseWait);
+
+        engine.updateInputs(Map.of(
                 "sensor", true
         ));
+        System.out.println("Updated inputs while paused: " + engine.dumpInputs());
 
-        manager.step();
+        engine.resume();
+        System.out.println("Resumed. Status: " + engine.getStatus());
 
-        System.out.println("After input update and step:");
-        System.out.println("Inputs: " + manager.dumpInputs());
-        System.out.println("Outputs: " + manager.dumpOutputs());
-        System.out.println("Globals: " + manager.dumpGlobals());
-        System.out.println("Vars: " + manager.dumpVars());
-        System.out.println("States: " + manager.dumpProcessStates());
-        System.out.println("Timers: " + manager.dumpProcessTimers());
+        Thread.sleep(12000);
+
+        System.out.println("After ~12 seconds resumed:");
+        System.out.println("States: " + engine.dumpProcessStates());
+        System.out.println("Timers: " + engine.dumpProcessTimers());
+        System.out.println("Outputs: " + engine.dumpOutputs());
+
+        engine.stop();
+        System.out.println("Stopped. Status: " + engine.getStatus());
+
+        System.out.println("Final states: " + engine.dumpProcessStates());
+        System.out.println("Final timers: " + engine.dumpProcessTimers());
     }
 }
