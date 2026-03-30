@@ -69,29 +69,6 @@ public class PlcSimulationEngine {
         return status;
     }
 
-    public boolean isRunning() {
-        return status == SimulationStatus.RUNNING;
-    }
-
-    public boolean isPaused() {
-        return status == SimulationStatus.PAUSED;
-    }
-
-    public boolean isStopped() {
-        return status == SimulationStatus.STOPPED;
-    }
-
-    public void setCyclePeriodMs(long cyclePeriodMs) {
-        if (cyclePeriodMs <= 0) {
-            throw new IllegalArgumentException("cyclePeriodMs must be > 0");
-        }
-        this.cyclePeriodMs = cyclePeriodMs;
-    }
-
-    public long getCyclePeriodMs() {
-        return cyclePeriodMs;
-    }
-
     public void start() {
         if (currentModelPath == null) {
             throw new IllegalStateException("No model loaded");
@@ -143,31 +120,20 @@ public class PlcSimulationEngine {
         simulationManager.step();
     }
 
+    public SimulationSnapshot getSnapshot() {
+        return new SimulationSnapshot(
+                currentModelPath,
+                status,
+                simulationManager.dumpInputs(),
+                simulationManager.dumpOutputs(),
+                simulationManager.dumpGlobals(),
+                simulationManager.dumpVars(),
+                simulationManager.dumpProcessStates(),
+                simulationManager.dumpProcessTimers()
+        );
+    }
+
     public void updateInputs(Map<String, Object> values) {
         simulationManager.updateInputs(values);
-    }
-
-    public Map<String, Object> dumpInputs() {
-        return simulationManager.dumpInputs();
-    }
-
-    public Map<String, Object> dumpOutputs() {
-        return simulationManager.dumpOutputs();
-    }
-
-    public Map<String, Object> dumpGlobals() {
-        return simulationManager.dumpGlobals();
-    }
-
-    public Map<String, Object> dumpVars() {
-        return simulationManager.dumpVars();
-    }
-
-    public Map<String, String> dumpProcessStates() {
-        return simulationManager.dumpProcessStates();
-    }
-
-    public Map<String, Long> dumpProcessTimers() {
-        return simulationManager.dumpProcessTimers();
     }
 }

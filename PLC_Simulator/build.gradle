@@ -1,6 +1,7 @@
 plugins {
     id 'java'
-    id 'application'
+    id 'org.springframework.boot' version '3.3.3'
+    id 'io.spring.dependency-management' version '1.1.6'
 }
 
 group = 'plc.simulator'
@@ -16,21 +17,15 @@ java {
     }
 }
 
-sourceSets {
-    main {
-        java {
-            srcDirs = ['src/main/java', 'src']
-        }
-    }
-    test {
-        java {
-            srcDirs = ['src/test/java']
-        }
-    }
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
-application {
-    mainClass = 'Main'
+tasks.named('test') {
+    useJUnitPlatform()
 }
 
 tasks.withType(JavaCompile).configureEach {
