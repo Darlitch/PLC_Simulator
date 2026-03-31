@@ -52,8 +52,8 @@ public class PlcSimulationService {
         return engine.getSnapshot();
     }
 
-    public SimulationSnapshot stop() {
-        engine.stop();
+    public SimulationSnapshot stop() throws Exception {
+        engine.reloadCurrentModel();
         return engine.getSnapshot();
     }
 

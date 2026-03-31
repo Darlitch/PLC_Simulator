@@ -42,7 +42,7 @@ public class PlcSimulationController {
     }
 
     @PostMapping("/simulation/stop")
-    public ResponseEntity<SimulationSnapshot> stop() {
+    public ResponseEntity<SimulationSnapshot> stop() throws Exception {
         return ResponseEntity.ok(simulationService.stop());
     }
 

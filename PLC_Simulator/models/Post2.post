@@ -1,0 +1,480 @@
+CONFIGURATION RM220
+	VAR_GLOBAL CONSTANT
+		CUR_INTERVAL: TIME := T#100ms; (* пока так *)
+		ONE_SECOND: TIME := T#1s; (* пока так *)
+
+		CP_Troom_X_X_X: REAL := 20.0; (* значение комнатной температуры С *)
+
+	(* контур Потребителя *)
+		CP_G_U_BE_P: REAL := 14.0 / ONE_SECOND; (* производительность насоса 14.18 кг/с ~ 14 л/с *)
+		CP_V_U_X_B:  REAL := 1500.0; (* объем бака-аккумулятора [л]*)
+		CP_V_U_BE_X: REAL := 30.0; (* объем участка "бак-Испаритель" *)
+		CP_V_U_E_R:  REAL := 30.0; (* объем хладагента в испарителе [л]*)
+		CP_V_U_EU_X: REAL := 30.0; (* объем участка "испар.-пользователь" *)
+		CP_V_U_U_R: REAL := 30.0; (* объём хладагента в пользователе *)
+		CP_V_U_UB_X: REAL := 30.0; (* объем участка "пользователь-бак" *)
+
+		CP_Ccool_U_X_X: REAL := 3450.0; (* темплоёмкость хладоносителя в контуре пользователя  (3,45 кДж/(кг К)) *)
+		CP_Ccool_U_U_R: REAL := CP_Ccool_U_X_X * CP_V_U_U_R; (* темплоёмкость хладоносителя в радиаторе пользователя  (3,45 кДж/(кг К)) * V радиатора *)
+		CP_Ccool_U_E_R: REAL := CP_Ccool_U_X_X * CP_V_U_E_R; (* темплоёмкость хладоносителя в радиаторе испарителя  (3,45 кДж/(кг К)) * V радиатора *)
+
+		DP_T_U_EU_U: REAL := 20.0; (* отладочный параметр -- Т на входе пользователя*)
+
+		CP_C_UCp_X_S: REAL := 18000.0; (* теплоёмкость стенки в испарителе *)
+(* Q - 14 л/с, С - 4000 Дж/кг К, dT = 19 - 14, 200 КВт - мощность потребителя*)
+		CP_Ceqpt_U_U_X: REAL := 556.0; (* теплоемкость потребителя 556 Вт/К *)
+		CP_C_U_X_U: REAL := 18000.0; (* теплоёмкость радиатора пользователя *)
+
+		CP_Ktrans_U_X_E: REAL := 90.0; (* коэффициент теплопередачи в испарителе *)
+		CP_Ktrans_U_X_U: REAL := 90.0; (* коэффициент теплопередачи от радиатора пользователя хладоносителю *)
+		CP_Ktrans_U_X_R: REAL := 90.0; (* коэффициент теплопередачи от пользователя радиатору *)
+
+	(* контур компрессора *) 
+		(* Объемная производительность компрессора VК': 71,4 [м3/час] = 19.83 [л/с] *)
+		CP_G_Cp_X_Cp: REAL := 19.83;  (* производительность копрессора [л/с] *)
+		CP_Kcp_Cp_X_Cp: REAL := 4.12; (* коэффициент объемного сжатия компрессора *)
+
+(*		NUMBER_OF_LIGHTS: INT := 3; *)
+	END_VAR
+
+	VAR_GLOBAL
+(* ========================================================================= *)
+(* =========== параметры среды (controls) ================================== *)
+
+(*====== ОТЛАДОЧНЫЕ контролзы: *)
+		AC_Tsep_Cp_E_S: REAL := 14.0; (* Температура перегородки испарителя. ОТЛАДКА *)
+
+(*====== контур потребителя: *)
+		AC_Qeqpt_U_U_U: REAL := 0.0; (* мощность потребителя Вт/мс *)
+
+
+(* ========================================================================= *)
+(* =========== датчики (sensors) =========================================== *)
+(*====== контур потребителя: *)
+		AS_G_U_BE_P: REAL; (* расход хладоносителя в контуре потребителя *)
+		AS_T_U_UB_B: REAL := CP_Troom_X_X_X; (* температура хладоносителя на входе в бак *)
+		AS_T_U_X_B: REAL := CP_Troom_X_X_X; (* температура хладоносителя в баке-аккум. *)
+		AS_T_U_BE_B: REAL := CP_Troom_X_X_X; (* температура хладоносителя на выходе из бака *)
+		AS_T_U_BE_X: REAL := CP_Troom_X_X_X; (* T хладоносителя на участке “бак-испаритель” *)
+		AS_T_U_BE_E: REAL := CP_Troom_X_X_X; (* T хладоносителя на входе испарителя *)
+		AS_T_U_E_R: REAL := CP_Troom_X_X_X; (* T хладоносителя в испарителе *)
+		AS_T_U_EU_E: REAL := CP_Troom_X_X_X; (* T хладоносителя на выходе из испарителя *)
+		AS_T_U_EU_X: REAL := CP_Troom_X_X_X; (* T хладоносителя на участке “испаритель-потребитель *)
+		AS_T_U_EU_U: REAL := CP_Troom_X_X_X; (* T хладоносителя на входе потребителя *)
+		AS_T_U_U_R: REAL := CP_Troom_X_X_X; (* T  радиатора потребителя *)
+		AS_Tcool_U_U_R: REAL := CP_Troom_X_X_X; (* T  хладоносителя в потребителе *)
+		AS_T_U_UB_U: REAL := CP_Troom_X_X_X; (* T хладоносителя на выходе потребителя *)
+		AS_T_U_UB_X: REAL := CP_Troom_X_X_X; (* T хладоносителя на участке “потребитель-бак” *)
+		AS_T_UCp_E_S: REAL := CP_Troom_X_X_X; (* T стенки в испарителе *)
+		AS_Teqpt_U_U_X: REAL := CP_Troom_X_X_X; (* T потребителя *)
+		
+(*====== контур компрессора: *)
+		AS_P_Cp_ECp_X: REAL; (* давление на входе компрессора *)
+		AS_T_Cp_ECp_X: REAL := CP_Troom_X_X_X; (* температура на входе компрессора *)
+		AS_P_Cp_CpCd_Cp: REAL; (* P сжатого хладагента компрессором *)
+		AS_T_Cp_CpCd_Cp: REAL := CP_Troom_X_X_X; (* T сжатого хладагента компрессором *)
+		AS_dV_Cp_ECp_Cp: REAL;  (* V захваченного компрессором хладагента *)
+		AS_dV_Cp_CpCd_Cp: REAL; (* V сжатого хладагента компрессором *)
+
+(* ========================================================================= *)
+(* ========== исполнительные устройства-актуаторы (actuators) ============== *)
+(*====== контур потребителя: *)
+		DA_X_U_BE_P: BOOL; (*управление насосом *)
+(*====== контур компрессора: *)
+		DA_X_Cp_X_Cp: BOOL; (* состояние компрессора (ВКЛ/ВЫКЛ) *)
+	END_VAR
+
+	
+(*	VAR_GLOBAL
+		lightsArray1 : ARRAY [0 .. NUMBER_OF_LIGHTS] OF BOOL := [red1, yellow1, green1];
+		lightsArray2 : ARRAY [0 .. NUMBER_OF_LIGHTS] OF BOOL := [green2, yellow2, red2];
+	END_VAR
+*)
+	RESOURCE r1 ON OWEN_PLC
+		TASK T1 (INTERVAL := T#100ms, PRIORITY := 1);
+		PROGRAM plant_controller WITH T1: MX_220(
+		(* контур потребителя *)	
+			(* моделируем насос, определяем поток: *)			
+			PROCESS ACTIVE pump: Pump (state := DA_X_U_BE_P, power := CP_G_U_BE_P, Fout => AS_G_U_BE_P),
+
+			(* моделируем бак: *)			
+			PROCESS ACTIVE u_Tank: Tank (Vtank := CP_V_U_X_B, G := AS_G_U_BE_P, Tin := AS_T_U_UB_B, Tinside => AS_T_U_X_B, Tout => AS_T_U_BE_B),
+			
+			(* моделируем участок от бака до испарителя: *)			
+			PROCESS ACTIVE u_BE_pipe: Tank (Vtank := CP_V_U_BE_X, G := AS_G_U_BE_P, Tin := AS_T_U_BE_B, Tinside => AS_T_U_BE_X, Tout => AS_T_U_BE_E),
+
+			(* Приток в испаритель (контур Пользователя): *)			
+			PROCESS ACTIVE u_Evaporator: Tank (
+				Vtank := CP_V_U_E_R, 
+				G := AS_G_U_BE_P, 
+				Tin := AS_T_U_BE_E,
+				Tinside => AS_T_U_E_R, 
+				Tout => AS_T_U_EU_E),
+
+			(* Теплообмен в испарителе (контур потребителя): *)			
+			PROCESS ACTIVE u_EvaporatorHeatTransfer: CoolantHeatTransfer (
+			 	Ktrans 	:= CP_Ktrans_U_X_E, 
+				Cobj 	:= CP_C_UCp_X_S, 
+				Ccool 	:= CP_Ccool_U_E_R, (* в испарителе *)
+				Tobj => AS_T_UCp_E_S,
+				Tcool => AS_T_U_E_R),
+
+            (* ОТЛАДКА. Температура перегородки испарителя (контур потребителя): Analogue Controls --> Analogue Sensor*)			
+			PROCESS ACTIVE u_DebugTseptum: AC2AS_Debug ( 
+			 	AC 	:= AC_Tsep_Cp_E_S, 
+				AS => AS_T_UCp_E_S),
+			
+			(* Участок от испарителя до потребителя: *)			
+			PROCESS ACTIVE u_EU_pipe: Tank (
+				Vtank := CP_V_U_EU_X, 
+				G := AS_G_U_BE_P, 
+				Tin := AS_T_U_EU_E, 
+				Tinside => AS_T_U_EU_X, 
+				Tout => AS_T_U_EU_U),
+
+			(* Приток в Потребителя (контур Пользователя): *)			
+			PROCESS ACTIVE u_User: Tank (
+				Vtank := CP_V_U_U_R, 
+				G := AS_G_U_BE_P, 
+				Tin := AS_T_U_EU_U,
+				Tinside => AS_Tcool_U_U_R, 
+				Tout => AS_T_U_UB_U),
+
+			(* Разогрев оборудования Потребителя (контур Пользователя): *)			
+			PROCESS ACTIVE u_Equipment: Equipment ( Qeqpt := AC_Qeqpt_U_U_U, Ceqpt := CP_Ceqpt_U_U_X, Teqpt => AS_Teqpt_U_U_X),
+
+			(* Теплообмен от потребителя к радиатору (контур потребителя): *)
+			PROCESS ACTIVE u_UserRadiatorHeatTransfer: CoolantHeatTransfer (
+			 	Ktrans 	:= CP_Ktrans_U_X_R, 
+				Cobj 	:= CP_Ceqpt_U_U_X,
+				Ccool 	:= CP_C_U_X_U, 
+				Tobj  => AS_Teqpt_U_U_X, 
+				Tcool => AS_T_U_U_R),
+
+			(* Теплообмен от радиатора потребителя к хладоносителю (контур потребителя): *)
+			PROCESS ACTIVE u_UserRadiatorCoolantHeatTransfer: CoolantHeatTransfer (
+			 	Ktrans 	:= CP_Ktrans_U_X_U, 
+				Cobj 	:= CP_C_U_X_U,
+				Ccool 	:= CP_Ccool_U_U_R, 
+				Tobj  => AS_T_U_U_R, 
+				Tcool => AS_Tcool_U_U_R),
+
+
+			(* Т участка "потребитель-бак": *)			
+			PROCESS ACTIVE u_UB_pipe: Tank (Vtank := CP_V_U_UB_X, G := AS_G_U_BE_P, Tin := AS_T_U_UB_U, Tinside => AS_T_U_UB_X, Tout => AS_T_U_UB_B) 
+			//!!! ,
+
+		);
+	END_RESOURCE
+END_CONFIGURATION
+
+		(* контур компрессора *)
+			(* захват хладагента компрессором *)
+// 			PROCESS ACTIVE u_CpCd_compressor: Compressor (
+// 			state := DA_X_Cp_X_Cp, (* состояние компрессора (ВКЛ/ВЫКЛ) *)
+// 			G := CP_G_Cp_X_Cp, (* производительность копрессора [л/с] *)
+// 			CR := CP_Kcp_Cp_X_Cp, (* коэффициент объемного сжатия *) 
+// 			Pin := AS_P_Cp_ECp_X, (* давление на входе компрессора *)
+// 			Tin := AS_T_Cp_ECp_X, (* температура на входе компрессора *)
+// 
+// 			Pout => AS_P_Cp_CpCd_Cp,  (* P сжатого хладагента компрессором *)
+// 			Tout => AS_T_Cp_CpCd_Cp,  (* T сжатого хладагента компрессором *)
+// 			dVin => AS_dV_Cp_ECp_Cp,  (* V захваченного компрессором хладагента *)
+// 			dVout => AS_dV_Cp_CpCd_Cp) (* V сжатого хладагента компрессором *)
+
+(* 			PROCESS ACTIVE red_light1: Light(b_light => red1),
+			PROCESS yellow_light1: Light(b_light => yellow1),
+			PROCESS green_light1: Light(b_light => green1),
+			PROCESS red_light2 : Light(b_light => red2),
+			PROCESS yellow_light2 : Light(b_light => yellow2),
+			PROCESS ACTIVE green_light2 : Light(b_light => green2),
+			PROCESS ACTIVE control1: Control(control_sensor := sensor, pRed := red_light1, pYellow := yellow_light1, pGreen := green_light1, rLightsArray := lightsArray1),
+			PROCESS ACTIVE control2: Control(control_sensor := sensor, pRed := green_light2, pYellow := yellow_light2, pGreen := red_light2, rLightsArray := lightsArray2)
+*)
+
+
+PROGRAM MX_220
+
+(* ======= ОТЛАДОЧНЫЕ ПРОЦЕССЫ ================= *)
+
+(* ОТЛАДКА. Analogue Controls --> Analogue Sensor *)
+(*      Инициализирует показания датчика заданной величной *)
+    PROCESS AC2AS_Debug 
+        VAR_INPUT
+            AC : REAL; (* аналоговый котролз *)
+        END_VAR
+        VAR_OUTPUT
+            AS : REAL; (* аналоговый датчик *)
+        END_VAR
+        STATE Calc LOOPED
+            AS := AC;
+		END_STATE
+	END_PROCESS
+
+(* ======= КОНТУР КОМПРЕССОРА ================= *)
+(* ====== МОДЕЛЬ КОМПРЕССОРА === *)
+(* ОПИСАНИЕ МЕТОДИКИ РАСЧЕТА *)
+	(* Исходные данные:
+	Объемная производительность компрессора VК': 71,4 [м3/час] = 19.83 [л/с]
+	Объем захваченный компрессором
+		_dV_Cp_TCp_X = DA_X_Cp_X_Cp * CP_GKcp_Cp_X_Cp * dt; (* порция захваченного компрессором хладагента *)
+
+	(* Адиабатическое сжатие в компрессоре захваченного объема:
+		CR = CP_Kcp_Cp_X_Cp; (* коэффициент сжатия *)
+	(*	_P_Cp = (CR)1,16 * AS_P_Cp_ECp_X; (* давление сжатого хладагента *)
+	(*  _Т_Cp =  (CR)0,16 * AS_T_Cp_ECp_X; (* температура сжатого хладагента *)
+	(*  _dV_Cp_CpCd_X = CR * _dV_Cp_TCp_X; (* порция сжатого компрессором хладагента *)
+(* РЕАЛИЗАЦИЯ: *)
+	PROCESS Compressor
+		VAR_INPUT
+			state : BOOL; (* состояние компрессора (ВКЛ/ВЫКЛ) *)
+			G : REAL; (* производительность копрессора [л/с] *)
+			CR : REAL; (* коэффициент объемного сжатия *) 
+			Pin: REAL; (* давление на входе компрессора *)
+			Tin: REAL; (* температура на входе компрессора *)
+		END_VAR
+		VAR_OUTPUT
+			Pout: REAL;  (* давление на выходе компрессора *)
+			Tout: REAL;  (* температура на выходе компрессора *)
+			dVin : REAL; (* порция захваченного компрессором хладагента *)
+			dVout: REAL; (* объем на выходе компрессора *)
+		END_VAR
+		STATE Calc LOOPED
+			IF state THEN
+				dVin := G * CUR_INTERVAL; (* порция захваченного компрессором хладагента *)
+				Pout := CR**1.16 * Pin; (* давление сжатого хладагента *)
+				Tout := CR**0.16 * Tin; (* температура сжатого хладагента *)
+				dVout := CR * dVin; (* объем сжатого компрессором хладагента *)
+			END_IF
+		END_STATE
+	END_PROCESS
+
+(* ====== МОДЕЛЬ ИСПАРИТЕЛЯ === *)
+(* ОПИСАНИЕ МЕТОДИКИ РАСЧЕТ *)
+	(* Расчет производится исходя из следующих предположений.
+	Повышение давление в отрезке дроссель-компрессор при впрыскивании хладагента (жидкая фаза) в радиатор  незначительно. Повышение давления в отрезке происходит вследствии испарения хладагента на радиаторе. 
+	Теплообмен происходит через стенку, разделяющую хладоноситель и хладагент,  стенка имеет некоторую теплоемкость, что позволяет моделировать разогрев элементов системы при закрытом дросселе.
+	Дроссель открывается при температуре стенки, которая гарантирует полное переход хладагента из жидкого состояния в газообразное.
+	За дросселем (со стороны конденсатора) всегда находится жидкость. Дроссель разбрызгивает жидкость.
+	Характер взаимодействия хладагента с перегородкой. Кол-во тепла зависит от площади соприкосновения и разницы температур.
+	На отрезке от дросселя до компрессора температура газообразного ХА одинакова.
+
+	Расчет производится по следующей схеме.
+	Вычисляется площадь контакта перегородки и впрыснутого жидкого хладагента.
+	Вычисляется количество тепла Q, переданного от перегородки к хладагенту.
+	Вычисляется изменение температуры перегородки в результате взаимодействия с радиатором ХА.
+	Вычисляется новые параметры хладагента на участке дроссель-компрессор в соответствии с нижеописанной схемы.
+	После впрыскивания объем отрезка “дроссель-компрессор” (V) делится на две части пропорционально массе газа m1 до впрыскивания и массе впрыснутого жидкого хладагента m2. 
+	Далее расчет ведется для каждого из объемов. 
+	6.1. Для объема V1 (газ) . Вычисляется работа A по сжатию V до объема V1. Затем вычисляется количество тепла Q1, которое нужно отнять, чтобы довести газ в объеме V1 до состояния насыщенного пара.
+	6.2. Для объема V2 (жидкость). Вычисляется количество тепла Q2, которое нужно подвести к жидкому хладагенту, чтобы довести жидкость в объеме V2 до состояния насыщенного пара.
+	Затем вычисляется собственно давление и температура в объеме V (V1 + V2), при условии подвода к нему тепла Q, принятого в результате теплопереноса от перегородки, за вычетом (A + Q2 - Q1). 
+	*)
+
+(* КОД РЕАЛИЗАЦИИ МОДЕЛИ ИСПАРИТЕЛЯ ================= *)
+(*	PROCESS EvaporatorRefregerantHeatTransfer
+*)
+
+
+
+(* ======= КОНТУР ПОТРЕБИТЕЛЯ ================= *)
+(* ====== МОДЕЛЬ ЖИДКОСТНОГО НАСОСА ======= *)
+	PROCESS Pump
+		VAR_INPUT
+			state : BOOL; (* состояние насоса (ВКЛ/ВЫКЛ) *)
+			power : REAL; (* производительность насоса [л/с] *)
+		END_VAR
+		VAR_OUTPUT
+			Fout : REAL;  (* поток жидкости создаваемый насосом [л/с] *)
+		END_VAR
+		STATE CalcFlow LOOPED
+			IF state THEN
+				Fout := power;
+			ELSE 
+				Fout := 0.0;
+			END_IF
+		END_STATE
+	END_PROCESS
+
+(* ====== МОДЕЛЬ АСТРАКТНОГО БАКА ======= *)
+	PROCESS Tank
+	(* Vtank := CP_V_U_X_B, G := AS_G_U_BE_P, Tin := AS_T_U_UB_B, Tinside => AS_T_U_X_B, Tout => AS_T_U_BE_B) *)
+		VAR_INPUT
+			Vtank : REAL;
+			G : REAL;
+			Tin : REAL;
+		END_VAR
+		VAR_OUTPUT
+			Tinside : REAL;
+			Tout : REAL;
+		END_VAR
+		VAR
+			dV : REAL;
+		END_VAR
+		STATE CalcTemperatures LOOPED
+			dV := G * CUR_INTERVAL;
+			Tout := Tinside; (* температура из бака *)
+			Tinside := (Tinside * (Vtank - dV) + Tin * dV) / Vtank; (* Тбака это смешение порции жидкости с Тпотребителя и остатка жидкости со старой температурой *)
+		END_STATE
+	END_PROCESS
+
+(* ====== МОДЕЛЬ ОБОРУДОВАНИЯ ПОТРЕБИТЕЛЯ ======= *)
+	PROCESS Equipment
+		VAR_INPUT
+			Qeqpt : REAL;
+			Ceqpt : REAL;			
+		END_VAR
+		VAR_OUTPUT
+			Teqpt : REAL;
+		END_VAR
+		STATE CalcTemperature LOOPED
+			Teqpt := Teqpt  + Qeqpt * CUR_INTERVAL / Ceqpt; (* Т оборудования изменяется на величину, вычисляемую как выделенная мощность за dt, деленная на теплоемкость оборудования *)	
+		END_STATE
+	END_PROCESS
+
+(* ====== МОДЕЛЬ ТЕПЛОПЕРЕНОСА СТЕНКА-ХЛАДОНОСИТЕЛЬ ======= *)
+	PROCESS CoolantHeatTransfer
+		VAR_INPUT
+			Ktrans : REAL;
+			Cobj   : REAL;
+			Ccool  : REAL;			
+		END_VAR
+		VAR_OUTPUT
+			Tobj  : REAL;
+			Tcool : REAL;
+		END_VAR
+		VAR
+			Q : REAL; (* Количество перенесенного тепла в результате взаимодействия поверхности объекта с объемом хладоносителя *)
+			C : REAL; (* теплоемкость наименьшая *)
+		END_VAR
+
+		STATE CalcTemperatures LOOPED
+		(* 1. Вычисляем количество тепла, перенесенного в результате взаимодействия поверхности объекта с объемом хладоносителя: *)
+			Q := (Tobj - Tcool) * Ktrans * CUR_INTERVAL; (* цикл *)
+		(* 2. Вычисляем новую температуру объекта. Поскольку объект остывает
+		Q = (Tobj_1 - Tobj) * Cobj => *)
+			
+			IF (Cobj < Ccool) THEN
+				(* Q должно быть меньше, чем ((Tobj - Tcool) * Cobj) / 2 *)
+				C := Cobj;
+			ELSE
+				(* Q должно быть меньше, чем ((Tobj - Tcool) * Ccool) / 2 *)
+				C := Ccool;
+			END_IF
+			IF (Q > 0.0) THEN (* случай Tobj > Tcool *)
+				(* Q должно быть меньше, чем ((Tobj - Tcool) * Cobj) / 2 *)
+				IF (Q > ((Tobj - Tcool) * C / 2.0)) THEN (* в рез-те взаимодействия Тело не может остыть ниже Tobj - (Tobj - Tcool) / 2 *)
+					Q := (Tobj - Tcool) * C / 2.0; 
+				END_IF				
+			ELSE
+				IF (Q < ((Tobj - Tcool) * C / 2.0)) THEN (* в рез-те взаимодействия Тело не может остыть ниже Tobj - (Tobj - Tcool) / 2 *)
+					Q := (Tobj - Tcool) * C / 2.0; 
+				END_IF				
+			END_IF
+
+			Tobj := (Tobj * Cobj - Q) / Cobj;
+		(* 3. Вычисляем новую температуру объема хладагента. 
+		Поскольку хладоноситель нагревается
+		Q = (Tcool - Tcool_1) * Ccool => *)
+			Tcool := ((Tcool * Ccool) + Q) / Ccool;
+	
+		END_STATE
+	END_PROCESS
+
+
+(* ====== ПРИМЕРЫ КОДА НА poST ======= *)
+	(*		PROCESS Light
+			VAR_OUTPUT
+				b_light : BOOL;
+			END_VAR
+
+			STATE Light LOOPED
+				AS_G_U_BE_P := DA_X_U_BE_P * CP_G_U_BE_P; (* расход хладоносителя либо отсутствует при выключенном насосе, либо некоторая константа *)
+
+	(* Расчет температуры в баке:
+	AS_T_U_X_B = (AS_T_U_X_B_1 * (CP_V_U_X_B - AS_G_U_X_P * dt) + AS_T_U_UB_X * AS_G_U_X_P * dt) / CP_V_U_X_B; (* Тбака это смешение порции жидкости с Тпотребителя и остатка жидкости со старой температурой *)
+
+	(* Расчет температуры на участке "бак-испаритель":
+	AS_T_U_BE_X = (AS_T_U_BE_X_1 * (CP_V_U_BE_X - AS_G_U_X_P * dt) + AS_T_U_X_B_1 * AS_G_U_X_P * dt) / CP_V_U_BE_X; (* Т на участке это смешение порции жидкости с новой температурой и остатка жидкости со старой температурой *)
+
+	(* AS_T_U_X_B_1 = AS_T_U_X_B; 
+	AS_T_U_BE_X_1 = AS_T_U_BE_X; (* синхронизация *)
+
+	(* 		END_STATE
+		END_PROCESS
+
+		PROCESS Control
+			VAR_INPUT
+				control_sensor : BOOL;
+				rLightsArray : ARRAY [*] OF BOOL;
+			END_VAR
+
+			VAR_PROCESS
+				pRed : Light;
+				pYellow : Light;
+				pGreen : Light;
+			END_VAR
+
+			VAR
+				prev_light : INT;
+				alight : INT;
+				pressed : BOOL;
+			END_VAR
+
+			STATE Work
+				IF pressed THEN
+					prev_light := 0;
+					pressed := FALSE;
+				ELSIF ((PROCESS pRed IN STATE INACTIVE) AND (PROCESS pGreen IN STATE ACTIVE)) OR ((PROCESS pGreen IN STATE INACTIVE) AND (PROCESS pRed IN STATE ACTIVE)) THEN
+					FOR alight := 0 TO NUMBER_OF_LIGHTS DO
+						IF rLightsArray[alight] THEN
+							prev_light := alight;
+						END_IF
+						rLightsArray[alight] := FALSE;
+					END_FOR
+					STOP PROCESS pRed;
+					START PROCESS pYellow;
+					STOP PROCESS pGreen;
+					SET STATE delay10;
+				ELSIF prev_light = 0 THEN
+					FOR alight := 0 TO NUMBER_OF_LIGHTS DO
+						rLightsArray[alight] := FALSE;
+					END_FOR
+					STOP PROCESS pRed;
+					STOP PROCESS pYellow;
+					START PROCESS pGreen;
+					SET STATE delay30;
+				ELSIF prev_light = 2 THEN
+					FOR alight := 0 TO NUMBER_OF_LIGHTS DO
+						rLightsArray[alight] := FALSE;
+					END_FOR
+					START PROCESS pRed;
+					STOP PROCESS pYellow;
+					STOP PROCESS pGreen;
+					SET STATE delay30;
+				END_IF
+			END_STATE
+
+			STATE delay10
+				TIMEOUT T#10s THEN
+					SET STATE Work;
+						IF control_sensor THEN
+							pressed := TRUE;
+					END_IF
+				END_TIMEOUT
+			END_STATE
+
+			STATE delay30
+				IF control_sensor AND PROCESS pRed IN STATE ACTIVE THEN
+					pressed := TRUE;
+					SET STATE Work;
+				END_IF
+				TIMEOUT T#30s THEN
+					pressed := FALSE;
+					SET STATE Work;
+				END_TIMEOUT
+			END_STATE
+		END_PROCESS
+	*)
+END_PROGRAM
+
