@@ -1,15 +1,18 @@
 package generator;
 
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class JarPostGeneratorRunner implements IPostGeneratorRunner {
+    private static final String ENTRYPOINT_SOURCE = "Simulation.java";
+
     private final Path generatorJar;
 
     public JarPostGeneratorRunner(Path generatorJar) {
@@ -50,21 +53,45 @@ public class JarPostGeneratorRunner implements IPostGeneratorRunner {
             }
         }
 
+        String normalizedOutput = normalizeProcessOutput(output.toString());
+
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            throw new IllegalStateException(
-                    "Generator process failed with exit code " + exitCode +
-                            System.lineSeparator() +
-                            output
-            );
+            throw new IllegalStateException(buildGeneratorFailureMessage(exitCode, normalizedOutput));
         }
 
         if (!containsJavaFiles(outputSourcesDir)) {
             throw new IllegalStateException(
-                    "Generator finished successfully, but no .java files were created in: " +
-                            outputSourcesDir + System.lineSeparator() + output
+                    normalizedOutput.isBlank()
+                            ? "Generator finished successfully, but no .java files were produced."
+                            : "Generator did not produce Java files:" + System.lineSeparator() + normalizedOutput
             );
         }
+
+        Path simulationSource = outputSourcesDir.resolve(ENTRYPOINT_SOURCE);
+        if (!Files.isRegularFile(simulationSource)) {
+            throw new IllegalStateException(
+                    normalizedOutput.isBlank()
+                            ? "Generator did not produce required entry point source: " + ENTRYPOINT_SOURCE
+                            : "Generator output is incomplete: missing " + ENTRYPOINT_SOURCE + System.lineSeparator() + normalizedOutput
+            );
+        }
+    }
+
+    private String buildGeneratorFailureMessage(int exitCode, String output) {
+        if (output.isBlank()) {
+            return "Generator process failed with exit code " + exitCode + ".";
+        }
+
+        return "Generator failed:" + System.lineSeparator() + output;
+    }
+
+    private String normalizeProcessOutput(String output) {
+        return output.lines()
+                .map(String::stripTrailing)
+                .filter(line -> !line.isBlank())
+                .collect(Collectors.joining(System.lineSeparator()))
+                .strip();
     }
 
     private void recreateDirectory(Path dir) throws IOException {

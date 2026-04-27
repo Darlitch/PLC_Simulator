@@ -1,16 +1,21 @@
 package runtime;
 
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 public class JavaxGeneratedCodeCompiler implements IGeneratedCodeCompiler {
+    private static final String ENTRYPOINT_CLASS = "Simulation.class";
 
     @Override
     public void compile(Path sourcesDir, Path classesDir) throws Exception {
@@ -37,7 +42,9 @@ public class JavaxGeneratedCodeCompiler implements IGeneratedCodeCompiler {
             throw new IllegalStateException("No Java source files found in: " + sourcesDir);
         }
 
-        try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null)) {
+        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+
+        try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null)) {
             var compilationUnits = fileManager.getJavaFileObjectsFromPaths(javaFiles);
 
             List<String> options = List.of(
@@ -47,18 +54,53 @@ public class JavaxGeneratedCodeCompiler implements IGeneratedCodeCompiler {
             Boolean ok = compiler.getTask(
                     null,
                     fileManager,
-                    null,
+                    diagnostics,
                     options,
                     null,
                     compilationUnits
             ).call();
 
             if (ok == null || !ok) {
-                throw new IllegalStateException("Compilation failed for sources in: " + sourcesDir);
+                throw new IllegalStateException(buildCompilationErrorMessage(diagnostics));
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to compile generated sources", e);
         }
+
+        Path simulationClass = classesDir.resolve(ENTRYPOINT_CLASS);
+        if (!Files.isRegularFile(simulationClass)) {
+            throw new IllegalStateException(
+                    "Compilation did not produce required entry point class: " + ENTRYPOINT_CLASS
+            );
+        }
+    }
+
+    private String buildCompilationErrorMessage(DiagnosticCollector<JavaFileObject> diagnostics) {
+        String message = diagnostics.getDiagnostics().stream()
+                .filter(diagnostic -> diagnostic.getKind() == Diagnostic.Kind.ERROR)
+                .map(this::formatDiagnostic)
+                .collect(Collectors.joining(System.lineSeparator()));
+
+        if (message.isBlank()) {
+            return "Compilation failed for generated Java sources.";
+        }
+
+        return "Compilation failed:" + System.lineSeparator() + message;
+    }
+
+    private String formatDiagnostic(Diagnostic<? extends JavaFileObject> diagnostic) {
+        String fileName = diagnostic.getSource() == null
+                ? "<unknown>"
+                : Path.of(diagnostic.getSource().toUri()).getFileName().toString();
+
+        long line = diagnostic.getLineNumber();
+        String localizedMessage = diagnostic.getMessage(Locale.ROOT).strip();
+
+        if (line > 0) {
+            return fileName + ":" + line + ": " + localizedMessage;
+        }
+
+        return fileName + ": " + localizedMessage;
     }
 
     private void recreateDirectory(Path dir) throws IOException {
