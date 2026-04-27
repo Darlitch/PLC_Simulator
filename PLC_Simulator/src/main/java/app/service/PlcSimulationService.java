@@ -14,72 +14,101 @@ import java.util.Map;
 
 @Service
 public class PlcSimulationService {
-    private final PlcSimulationEngine engine;
-    private final Path modelsDir = Path.of("models");
+    private final SimulationSessionManager sessionManager;
 
-    public PlcSimulationService(PlcSimulationEngine engine) {
-        this.engine = engine;
+    public PlcSimulationService(SimulationSessionManager sessionManager) {
+        this.sessionManager = sessionManager;
     }
 
-    public SimulationSnapshot loadModel(LoadModelRequest request) throws Exception {
+    public SimulationSnapshot loadModel(String sessionId, LoadModelRequest request) throws Exception {
         validateLoadRequest(request);
 
-        Files.createDirectories(modelsDir);
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        Path modelFile = writeModelFile(session.modelsDir(), request.modelName(), request.source());
+        session.engine().loadModel(modelFile);
 
-        Path modelFile = writeModelFile(request.modelName(), request.source());
-        engine.loadModel(modelFile);
-
-        return engine.getSnapshot();
+        return session.engine().getSnapshot();
     }
 
-    public SimulationSnapshot reloadCurrentModel() throws Exception {
-        engine.reloadCurrentModel();
-        return engine.getSnapshot();
+    public SimulationSnapshot reloadCurrentModel(String sessionId) throws Exception {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        session.engine().reloadCurrentModel();
+        return session.engine().getSnapshot();
     }
 
-    public SimulationSnapshot start() {
-        engine.start();
-        return engine.getSnapshot();
+    public SimulationSnapshot start(String sessionId) {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        session.engine().start();
+        return session.engine().getSnapshot();
     }
 
-    public SimulationSnapshot pause() {
-        engine.pause();
-        return engine.getSnapshot();
+    public SimulationSnapshot pause(String sessionId) {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        session.engine().pause();
+        return session.engine().getSnapshot();
     }
 
-    public SimulationSnapshot resume() {
-        engine.resume();
-        return engine.getSnapshot();
+    public SimulationSnapshot resume(String sessionId) {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        session.engine().resume();
+        return session.engine().getSnapshot();
     }
 
-    public SimulationSnapshot stop() throws Exception {
-        engine.reloadCurrentModel();
-        return engine.getSnapshot();
+    public SimulationSnapshot stop(String sessionId) throws Exception {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        session.engine().reloadCurrentModel();
+        return session.engine().getSnapshot();
     }
 
-    public SimulationSnapshot step() {
-        engine.step();
-        return engine.getSnapshot();
+    public SimulationSnapshot step(String sessionId) {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        session.engine().step();
+        return session.engine().getSnapshot();
     }
 
-    public SimulationSnapshot updateInputs(Map<String, Object> values) {
+    public SimulationSnapshot updateInputs(String sessionId, Map<String, Object> values) {
         if (values == null) {
             throw new IllegalArgumentException("values must not be null");
         }
 
-        engine.updateInputs(values);
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        session.engine().updateInputs(values);
+        return session.engine().getSnapshot();
+    }
+
+    public SimulationSnapshot getSnapshot(String sessionId) {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        return snapshotOf(session.engine());
+    }
+
+    public SimulationStatus getStatus(String sessionId) {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        if (session.engine().getCurrentModelPath() == null) {
+            return SimulationStatus.STOPPED;
+        }
+        return session.engine().getStatus();
+    }
+
+    private SimulationSnapshot snapshotOf(PlcSimulationEngine engine) {
+        if (engine.getCurrentModelPath() == null) {
+            return new SimulationSnapshot(
+                    null,
+                    SimulationStatus.STOPPED,
+                    Map.of(),
+                    Map.of(),
+                    Map.of(),
+                    Map.of(),
+                    Map.of(),
+                    Map.of()
+            );
+        }
+
         return engine.getSnapshot();
     }
 
-    public SimulationSnapshot getSnapshot() {
-        return engine.getSnapshot();
-    }
+    private Path writeModelFile(Path modelsDir, String modelName, String source) throws IOException {
+        Files.createDirectories(modelsDir);
 
-    public SimulationStatus getStatus() {
-        return engine.getStatus();
-    }
-
-    private Path writeModelFile(String modelName, String source) throws IOException {
         String fileName = sanitizeModelName(modelName);
         Path modelFile = modelsDir.resolve(fileName + ".post");
         Files.writeString(modelFile, source, StandardCharsets.UTF_8);

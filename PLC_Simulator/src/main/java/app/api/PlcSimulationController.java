@@ -17,52 +17,60 @@ public class PlcSimulationController {
     }
 
     @PostMapping("/model/load")
-    public ResponseEntity<SimulationSnapshot> loadModel(@RequestBody LoadModelRequest request) throws Exception {
-        return ResponseEntity.ok(simulationService.loadModel(request));
+    public ResponseEntity<SimulationSnapshot> loadModel(
+            @RequestHeader("Session-Id") String sessionId,
+            @RequestBody LoadModelRequest request
+    ) throws Exception {
+        return ResponseEntity.ok(simulationService.loadModel(sessionId, request));
     }
 
     @PostMapping("/model/reload")
-    public ResponseEntity<SimulationSnapshot> reloadCurrentModel() throws Exception {
-        return ResponseEntity.ok(simulationService.reloadCurrentModel());
+    public ResponseEntity<SimulationSnapshot> reloadCurrentModel(
+            @RequestHeader("Session-Id") String sessionId
+    ) throws Exception {
+        return ResponseEntity.ok(simulationService.reloadCurrentModel(sessionId));
     }
 
     @PostMapping("/simulation/start")
-    public ResponseEntity<SimulationSnapshot> start() {
-        return ResponseEntity.ok(simulationService.start());
+    public ResponseEntity<SimulationSnapshot> start(@RequestHeader("Session-Id") String sessionId) {
+        return ResponseEntity.ok(simulationService.start(sessionId));
     }
 
     @PostMapping("/simulation/pause")
-    public ResponseEntity<SimulationSnapshot> pause() {
-        return ResponseEntity.ok(simulationService.pause());
+    public ResponseEntity<SimulationSnapshot> pause(@RequestHeader("Session-Id") String sessionId) {
+        return ResponseEntity.ok(simulationService.pause(sessionId));
     }
 
     @PostMapping("/simulation/resume")
-    public ResponseEntity<SimulationSnapshot> resume() {
-        return ResponseEntity.ok(simulationService.resume());
+    public ResponseEntity<SimulationSnapshot> resume(@RequestHeader("Session-Id") String sessionId) {
+        return ResponseEntity.ok(simulationService.resume(sessionId));
     }
 
     @PostMapping("/simulation/stop")
-    public ResponseEntity<SimulationSnapshot> stop() throws Exception {
-        return ResponseEntity.ok(simulationService.stop());
+    public ResponseEntity<SimulationSnapshot> stop(@RequestHeader("Session-Id") String sessionId) throws Exception {
+        return ResponseEntity.ok(simulationService.stop(sessionId));
     }
 
     @PostMapping("/simulation/step")
-    public ResponseEntity<SimulationSnapshot> step() {
-        return ResponseEntity.ok(simulationService.step());
+    public ResponseEntity<SimulationSnapshot> step(@RequestHeader("Session-Id") String sessionId) {
+        return ResponseEntity.ok(simulationService.step(sessionId));
     }
 
     @PostMapping("/simulation/inputs")
-    public ResponseEntity<SimulationSnapshot> updateInputs(@RequestBody UpdateInputsRequest request) {
-        return ResponseEntity.ok(simulationService.updateInputs(request.values()));
+    public ResponseEntity<SimulationSnapshot> updateInputs(
+            @RequestHeader("Session-Id") String sessionId,
+            @RequestBody UpdateInputsRequest request
+    ) {
+        return ResponseEntity.ok(simulationService.updateInputs(sessionId, request.values()));
     }
 
     @GetMapping("/simulation/state")
-    public ResponseEntity<SimulationSnapshot> state() {
-        return ResponseEntity.ok(simulationService.getSnapshot());
+    public ResponseEntity<SimulationSnapshot> state(@RequestHeader("Session-Id") String sessionId) {
+        return ResponseEntity.ok(simulationService.getSnapshot(sessionId));
     }
 
     @GetMapping("/simulation/status")
-    public ResponseEntity<String> status() {
-        return ResponseEntity.ok(simulationService.getStatus().name());
+    public ResponseEntity<String> status(@RequestHeader("Session-Id") String sessionId) {
+        return ResponseEntity.ok(simulationService.getStatus(sessionId).name());
     }
 }

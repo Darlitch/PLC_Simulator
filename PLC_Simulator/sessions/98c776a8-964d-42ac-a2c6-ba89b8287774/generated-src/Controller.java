@@ -291,7 +291,7 @@ public class Controller {
                     }
                     else if (((((isInactive(getProcess("pRed"))) && (isActive(getProcess("pGreen"))))) || (((isInactive(getProcess("pGreen"))) && (isActive(getProcess("pRed"))))))) {
                         int __start = ((Number)(1)).intValue();
-                        int __end   = ((Number)(3)).intValue();
+                        int __end   = ((Number)(2)).intValue();
                         int __step  = ((Number)(1)).intValue();
 
                         if (__step == 0)
@@ -300,10 +300,10 @@ public class Controller {
                         writeVar("alight", __start);
 
                         while (loopCond("alight", __end, __step)) {
-                            if (getArrayBool("rLightsArray", readInt("alight"), 1)) {
+                            if (getArrayBool("rLightsArray", readInt("alight"), 0)) {
                                 writeVar("prev_light", readInt("alight"));
                             }
-                            setArrayValue("rLightsArray", readInt("alight"), 1, false);
+                            setArrayValue("rLightsArray", readInt("alight"), 0, false);
                             writeVar("alight", readInt("alight") + __step);
                         }
                         getProcess("pRed").stop();
@@ -313,7 +313,7 @@ public class Controller {
                     }
                     else if ((readInt("prev_light") == 0)) {
                         int __start = ((Number)(1)).intValue();
-                        int __end   = ((Number)(3)).intValue();
+                        int __end   = ((Number)(2)).intValue();
                         int __step  = ((Number)(1)).intValue();
 
                         if (__step == 0)
@@ -322,7 +322,7 @@ public class Controller {
                         writeVar("alight", __start);
 
                         while (loopCond("alight", __end, __step)) {
-                            setArrayValue("rLightsArray", readInt("alight"), 1, false);
+                            setArrayValue("rLightsArray", readInt("alight"), 0, false);
                             writeVar("alight", readInt("alight") + __step);
                         }
                         getProcess("pRed").stop();
@@ -332,7 +332,7 @@ public class Controller {
                     }
                     else if ((readInt("prev_light") == 2)) {
                         int __start = ((Number)(1)).intValue();
-                        int __end   = ((Number)(3)).intValue();
+                        int __end   = ((Number)(2)).intValue();
                         int __step  = ((Number)(1)).intValue();
 
                         if (__step == 0)
@@ -341,7 +341,7 @@ public class Controller {
                         writeVar("alight", __start);
 
                         while (loopCond("alight", __end, __step)) {
-                            setArrayValue("rLightsArray", readInt("alight"), 1, false);
+                            setArrayValue("rLightsArray", readInt("alight"), 0, false);
                             writeVar("alight", readInt("alight") + __step);
                         }
                         getProcess("pRed").start();

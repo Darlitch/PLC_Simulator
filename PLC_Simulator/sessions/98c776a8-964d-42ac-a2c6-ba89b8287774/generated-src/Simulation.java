@@ -19,7 +19,7 @@ public class Simulation implements ISimulationRuntime {
         memory.put("yellow2", false);
         memory.put("green2", false);
         memory.put("sensor", false);
-        memory.put("NUMBER_OF_LIGHTS", 3);
+        memory.put("NUMBER_OF_LIGHTS", 2);
         memory.put(
             "lightsArray1",
             new java.util.ArrayList<String>(
