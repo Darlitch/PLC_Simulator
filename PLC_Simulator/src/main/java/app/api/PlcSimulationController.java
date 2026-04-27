@@ -1,5 +1,6 @@
 package app.api;
 
+import app.api.dto.GeneratedSourcesResponse;
 import app.api.dto.LoadModelRequest;
 import app.api.dto.UpdateInputsRequest;
 import app.service.PlcSimulationService;
@@ -29,6 +30,13 @@ public class PlcSimulationController {
             @RequestHeader("Session-Id") String sessionId
     ) throws Exception {
         return ResponseEntity.ok(simulationService.reloadCurrentModel(sessionId));
+    }
+
+    @GetMapping("/model/generated-sources")
+    public ResponseEntity<GeneratedSourcesResponse> getGeneratedSources(
+            @RequestHeader("Session-Id") String sessionId
+    ) throws Exception {
+        return ResponseEntity.ok(simulationService.getGeneratedSources(sessionId));
     }
 
     @PostMapping("/simulation/start")

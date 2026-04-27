@@ -1,5 +1,6 @@
 package app.service;
 
+import app.api.dto.GeneratedSourcesResponse;
 import app.api.dto.LoadModelRequest;
 import org.springframework.stereotype.Service;
 import simulator.PlcSimulationEngine;
@@ -10,10 +11,19 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class PlcSimulationService {
+    private static final Set<String> RUNTIME_SOURCE_FILES = Set.of(
+            "Simulation.java",
+            "BaseProcess.java",
+            "IProcess.java"
+    );
+
     private final SimulationSessionManager sessionManager;
 
     public PlcSimulationService(SimulationSessionManager sessionManager) {
@@ -37,6 +47,19 @@ public class PlcSimulationService {
         engine.reloadCurrentModel();
         session.lastModelPath().set(engine.getCurrentModelPath());
         return engine.getSnapshot();
+    }
+
+    public GeneratedSourcesResponse getGeneratedSources(String sessionId) throws Exception {
+        SimulationSession session = sessionManager.getOrCreateSession(sessionId);
+        restoreIfNeeded(session);
+
+        Map<String, String> files = readGeneratedSources(session.generatedSourcesDir());
+        String programFileName = files.keySet().stream()
+                .filter(fileName -> !RUNTIME_SOURCE_FILES.contains(fileName))
+                .findFirst()
+                .orElse(null);
+
+        return new GeneratedSourcesResponse(programFileName, files);
     }
 
     public SimulationSnapshot start(String sessionId) throws Exception {
@@ -127,6 +150,31 @@ public class PlcSimulationService {
             session.lastModelPath().set(candidateModelPath);
             return engine;
         }
+    }
+
+    private Map<String, String> readGeneratedSources(Path generatedSourcesDir) throws IOException {
+        if (!Files.isDirectory(generatedSourcesDir)) {
+            return Map.of();
+        }
+
+        LinkedHashMap<String, String> files = new LinkedHashMap<>();
+
+        try (var stream = Files.list(generatedSourcesDir)) {
+            var sourceFiles = stream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().endsWith(".java"))
+                    .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                    .toList();
+
+            for (Path sourceFile : sourceFiles) {
+                files.put(
+                        sourceFile.getFileName().toString(),
+                        Files.readString(sourceFile, StandardCharsets.UTF_8)
+                );
+            }
+        }
+
+        return files;
     }
 
     private boolean hasCompiledClasses(Path generatedClassesDir) throws IOException {
