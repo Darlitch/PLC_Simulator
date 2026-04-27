@@ -26,67 +26,117 @@ public class PlcSimulationService {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
         Path modelFile = writeModelFile(session.modelsDir(), request.modelName(), request.source());
         session.engine().loadModel(modelFile);
+        session.lastModelPath().set(modelFile);
 
         return session.engine().getSnapshot();
     }
 
     public SimulationSnapshot reloadCurrentModel(String sessionId) throws Exception {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        session.engine().reloadCurrentModel();
-        return session.engine().getSnapshot();
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        engine.reloadCurrentModel();
+        session.lastModelPath().set(engine.getCurrentModelPath());
+        return engine.getSnapshot();
     }
 
-    public SimulationSnapshot start(String sessionId) {
+    public SimulationSnapshot start(String sessionId) throws Exception {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        session.engine().start();
-        return session.engine().getSnapshot();
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        engine.start();
+        return engine.getSnapshot();
     }
 
-    public SimulationSnapshot pause(String sessionId) {
+    public SimulationSnapshot pause(String sessionId) throws Exception {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        session.engine().pause();
-        return session.engine().getSnapshot();
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        engine.pause();
+        return snapshotOf(engine);
     }
 
-    public SimulationSnapshot resume(String sessionId) {
+    public SimulationSnapshot resume(String sessionId) throws Exception {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        session.engine().resume();
-        return session.engine().getSnapshot();
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        engine.resume();
+        return snapshotOf(engine);
     }
 
     public SimulationSnapshot stop(String sessionId) throws Exception {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        session.engine().reloadCurrentModel();
-        return session.engine().getSnapshot();
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        engine.reloadCurrentModel();
+        session.lastModelPath().set(engine.getCurrentModelPath());
+        return engine.getSnapshot();
     }
 
-    public SimulationSnapshot step(String sessionId) {
+    public SimulationSnapshot step(String sessionId) throws Exception {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        session.engine().step();
-        return session.engine().getSnapshot();
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        engine.step();
+        return engine.getSnapshot();
     }
 
-    public SimulationSnapshot updateInputs(String sessionId, Map<String, Object> values) {
+    public SimulationSnapshot updateInputs(String sessionId, Map<String, Object> values) throws Exception {
         if (values == null) {
             throw new IllegalArgumentException("values must not be null");
         }
 
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        session.engine().updateInputs(values);
-        return session.engine().getSnapshot();
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        engine.updateInputs(values);
+        return engine.getSnapshot();
     }
 
-    public SimulationSnapshot getSnapshot(String sessionId) {
+    public SimulationSnapshot getSnapshot(String sessionId) throws Exception {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        return snapshotOf(session.engine());
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        return snapshotOf(engine);
     }
 
-    public SimulationStatus getStatus(String sessionId) {
+    public SimulationStatus getStatus(String sessionId) throws Exception {
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        if (session.engine().getCurrentModelPath() == null) {
+        PlcSimulationEngine engine = restoreIfNeeded(session);
+        if (engine.getCurrentModelPath() == null) {
             return SimulationStatus.STOPPED;
         }
-        return session.engine().getStatus();
+        return engine.getStatus();
+    }
+
+    private PlcSimulationEngine restoreIfNeeded(SimulationSession session) throws Exception {
+        PlcSimulationEngine engine = session.engine();
+        if (engine.getCurrentModelPath() != null) {
+            return engine;
+        }
+
+        Path lastModelPath = session.lastModelPath().get();
+        if (lastModelPath == null || !Files.exists(lastModelPath) || !hasCompiledClasses(session.generatedClassesDir())) {
+            return engine;
+        }
+
+        synchronized (session) {
+            engine = session.engine();
+            if (engine.getCurrentModelPath() != null) {
+                return engine;
+            }
+
+            Path candidateModelPath = session.lastModelPath().get();
+            if (candidateModelPath == null || !Files.exists(candidateModelPath) || !hasCompiledClasses(session.generatedClassesDir())) {
+                return engine;
+            }
+
+            engine.restoreModel(candidateModelPath);
+            session.lastModelPath().set(candidateModelPath);
+            return engine;
+        }
+    }
+
+    private boolean hasCompiledClasses(Path generatedClassesDir) throws IOException {
+        if (!Files.isDirectory(generatedClassesDir)) {
+            return false;
+        }
+
+        try (var stream = Files.walk(generatedClassesDir)) {
+            return stream.anyMatch(path -> Files.isRegularFile(path) && path.getFileName().toString().endsWith(".class"));
+        }
     }
 
     private SimulationSnapshot snapshotOf(PlcSimulationEngine engine) {

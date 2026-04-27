@@ -42,6 +42,13 @@ public class PlcSimulationEngine {
         status = SimulationStatus.STOPPED;
     }
 
+    public void restoreModel(Path postFile) throws Exception {
+        stop();
+        simulationManager.loadFromCompiledClasses(generatedClassesDir);
+        currentModelPath = postFile;
+        status = SimulationStatus.STOPPED;
+    }
+
     public void reloadCurrentModel() throws Exception {
         if (currentModelPath == null) {
             throw new IllegalStateException("No model has been loaded yet");

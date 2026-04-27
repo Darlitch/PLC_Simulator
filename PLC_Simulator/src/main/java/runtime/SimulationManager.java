@@ -17,7 +17,10 @@ public class SimulationManager {
 
     public void loadFromCompiledSources(Path sourcesDir, Path classesDir) throws Exception {
         compiler.compile(sourcesDir, classesDir);
+        loadFromCompiledClasses(classesDir);
+    }
 
+    public void loadFromCompiledClasses(Path classesDir) throws Exception {
         unload();
 
         ISimulationLoader.LoadResult result = loader.load(classesDir);

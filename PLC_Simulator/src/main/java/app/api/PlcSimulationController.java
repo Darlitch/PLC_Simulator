@@ -32,17 +32,17 @@ public class PlcSimulationController {
     }
 
     @PostMapping("/simulation/start")
-    public ResponseEntity<SimulationSnapshot> start(@RequestHeader("Session-Id") String sessionId) {
+    public ResponseEntity<SimulationSnapshot> start(@RequestHeader("Session-Id") String sessionId) throws Exception {
         return ResponseEntity.ok(simulationService.start(sessionId));
     }
 
     @PostMapping("/simulation/pause")
-    public ResponseEntity<SimulationSnapshot> pause(@RequestHeader("Session-Id") String sessionId) {
+    public ResponseEntity<SimulationSnapshot> pause(@RequestHeader("Session-Id") String sessionId) throws Exception {
         return ResponseEntity.ok(simulationService.pause(sessionId));
     }
 
     @PostMapping("/simulation/resume")
-    public ResponseEntity<SimulationSnapshot> resume(@RequestHeader("Session-Id") String sessionId) {
+    public ResponseEntity<SimulationSnapshot> resume(@RequestHeader("Session-Id") String sessionId) throws Exception {
         return ResponseEntity.ok(simulationService.resume(sessionId));
     }
 
@@ -52,7 +52,7 @@ public class PlcSimulationController {
     }
 
     @PostMapping("/simulation/step")
-    public ResponseEntity<SimulationSnapshot> step(@RequestHeader("Session-Id") String sessionId) {
+    public ResponseEntity<SimulationSnapshot> step(@RequestHeader("Session-Id") String sessionId) throws Exception {
         return ResponseEntity.ok(simulationService.step(sessionId));
     }
 
@@ -60,17 +60,17 @@ public class PlcSimulationController {
     public ResponseEntity<SimulationSnapshot> updateInputs(
             @RequestHeader("Session-Id") String sessionId,
             @RequestBody UpdateInputsRequest request
-    ) {
+    ) throws Exception {
         return ResponseEntity.ok(simulationService.updateInputs(sessionId, request.values()));
     }
 
     @GetMapping("/simulation/state")
-    public ResponseEntity<SimulationSnapshot> state(@RequestHeader("Session-Id") String sessionId) {
+    public ResponseEntity<SimulationSnapshot> state(@RequestHeader("Session-Id") String sessionId) throws Exception {
         return ResponseEntity.ok(simulationService.getSnapshot(sessionId));
     }
 
     @GetMapping("/simulation/status")
-    public ResponseEntity<String> status(@RequestHeader("Session-Id") String sessionId) {
+    public ResponseEntity<String> status(@RequestHeader("Session-Id") String sessionId) throws Exception {
         return ResponseEntity.ok(simulationService.getStatus(sessionId).name());
     }
 }
