@@ -2,6 +2,7 @@ package app.service;
 
 import app.SimulationSessionProperties;
 import generator.IPostGeneratorRunner;
+import jakarta.annotation.PostConstruct;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import runtime.IGeneratedCodeCompiler;
@@ -37,6 +38,16 @@ public class SimulationSessionManager {
         this.simulationLoader = simulationLoader;
         this.properties = properties;
         this.sessionsRootDir = Path.of(properties.getRootDir());
+    }
+
+    @PostConstruct
+    void resetSessionsRootOnStartup() {
+        try {
+            deleteRecursively(sessionsRootDir);
+            Files.createDirectories(sessionsRootDir);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to reset sessions root directory on startup: " + sessionsRootDir, e);
+        }
     }
 
     public SimulationSession getOrCreateSession(String sessionId) {
