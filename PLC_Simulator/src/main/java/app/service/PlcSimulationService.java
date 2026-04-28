@@ -34,7 +34,7 @@ public class PlcSimulationService {
         validateLoadRequest(request);
 
         SimulationSession session = sessionManager.getOrCreateSession(sessionId);
-        Path modelFile = writeModelFile(session.modelsDir(), request.modelName(), request.source());
+        Path modelFile = writeModelFile(session.modelsDir(), request.source());
         session.engine().loadModel(modelFile);
         session.lastModelPath().set(modelFile);
 
@@ -204,11 +204,10 @@ public class PlcSimulationService {
         return engine.getSnapshot();
     }
 
-    private Path writeModelFile(Path modelsDir, String modelName, String source) throws IOException {
+    private Path writeModelFile(Path modelsDir, String source) throws IOException {
         Files.createDirectories(modelsDir);
 
-        String fileName = sanitizeModelName(modelName);
-        Path modelFile = modelsDir.resolve(fileName + ".post");
+        Path modelFile = modelsDir.resolve("model.post");
         Files.writeString(modelFile, source, StandardCharsets.UTF_8);
         return modelFile;
     }
@@ -221,19 +220,5 @@ public class PlcSimulationService {
         if (request.source() == null || request.source().isBlank()) {
             throw new IllegalArgumentException("source must not be blank");
         }
-    }
-
-    private String sanitizeModelName(String modelName) {
-        String value = (modelName == null || modelName.isBlank())
-                ? "runtime-input"
-                : modelName.trim();
-
-        value = value.replaceAll("[^a-zA-Z0-9._-]", "_");
-
-        if (value.isBlank()) {
-            value = "runtime-input";
-        }
-
-        return value;
     }
 }
